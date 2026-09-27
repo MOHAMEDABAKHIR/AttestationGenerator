@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt
 import os
 import re
+import sys
 from excel.read_file_excel import ExcelReader
 
 from utils.period import calculate_period
@@ -602,14 +603,7 @@ class Workspace(QWidget):
             #     EC_avec_retard.docx
             #     EC_sans_retard.docx
 
-            templates_dir = os.path.join(
-                os.path.dirname(
-                    os.path.dirname(
-                        os.path.abspath(__file__)
-                    )
-                ),
-                "templates"
-            )
+            templates_dir = self.get_templates_directory()
 
             generator = TemplateGenerator(
                 templates_dir
@@ -997,16 +991,21 @@ class Workspace(QWidget):
             )
     def get_templates_directory(self):
 
-        import os
-
-        project_root = os.path.dirname(
-            os.path.dirname(
-                os.path.abspath(__file__)
+        if getattr(sys, "frozen", False):
+            # Application construite avec PyInstaller
+            base_directory = os.path.dirname(
+                sys.executable
             )
-        )
+        else:
+            # Application lancée depuis le projet
+            base_directory = os.path.dirname(
+                os.path.dirname(
+                    os.path.abspath(__file__)
+                )
+            )
 
         return os.path.join(
-            project_root,
+            base_directory,
             "templates"
         )
 
