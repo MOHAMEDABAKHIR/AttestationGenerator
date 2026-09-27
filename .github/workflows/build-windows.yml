@@ -29,7 +29,63 @@ jobs:
 
 
       # ==========================================
-      # 3. Installer les dépendances
+      # 3. Vérifier la structure du projet
+      # ==========================================
+
+      - name: Verify project structure
+        shell: powershell
+        run: |
+
+          Write-Host "=========================================="
+          Write-Host "PROJECT ROOT"
+          Write-Host "=========================================="
+
+          Get-ChildItem -Force
+
+
+          Write-Host ""
+          Write-Host "=========================================="
+          Write-Host "TEMPLATES"
+          Write-Host "=========================================="
+
+          if (!(Test-Path "templates")) {
+              Write-Error "ERROR: templates directory does not exist!"
+              exit 1
+          }
+
+          Get-ChildItem "templates" -Force
+
+
+          Write-Host ""
+          Write-Host "=========================================="
+          Write-Host "CHECK REQUIRED TEMPLATES"
+          Write-Host "=========================================="
+
+          $requiredTemplates = @(
+              "CAC_avec_retard.docx",
+              "CAC_sans_retard.docx",
+              "EC_avec_retard.docx",
+              "EC_sans_retard.docx"
+          )
+
+          foreach ($template in $requiredTemplates) {
+
+              $path = "templates\$template"
+
+              if (!(Test-Path $path)) {
+                  Write-Error "ERROR: Missing template: $path"
+                  exit 1
+              }
+
+              Write-Host "OK: $path"
+          }
+
+          Write-Host ""
+          Write-Host "All templates are present."
+
+
+      # ==========================================
+      # 4. Installer les dépendances
       # ==========================================
 
       - name: Install dependencies
@@ -40,7 +96,7 @@ jobs:
 
 
       # ==========================================
-      # 4. Vérifier Python et PyInstaller
+      # 5. Vérifier environnement
       # ==========================================
 
       - name: Verify environment
@@ -49,8 +105,8 @@ jobs:
           pyinstaller --version
 
 
-            # ==========================================
-      # 5. Construire l'application
+      # ==========================================
+      # 6. Construire l'application
       # ==========================================
 
       - name: Build Windows application
@@ -59,43 +115,115 @@ jobs:
 
 
       # ==========================================
-      # 6. Vérifier le résultat
+      # 7. Afficher le contenu de DIST
       # ==========================================
 
-      - name: Verify build
+      - name: Inspect build output
         shell: powershell
         run: |
-          Write-Host "=== DIST ==="
-          Get-ChildItem -Recurse dist
 
-          if (!(Test-Path "dist\AttestationGenerator\AttestationGenerator.exe")) {
-              Write-Error "AttestationGenerator.exe not found!"
+          Write-Host "=========================================="
+          Write-Host "BUILD OUTPUT"
+          Write-Host "=========================================="
+
+          if (!(Test-Path "dist")) {
+              Write-Error "ERROR: dist directory does not exist!"
               exit 1
           }
 
-          if (!(Test-Path "dist\AttestationGenerator\templates")) {
-              Write-Error "templates directory not found!"
-              exit 1
-          }
-
-          Write-Host "Build verification successful."
+          Get-ChildItem -Recurse "dist" -Force
 
 
       # ==========================================
-      # 7. Créer le ZIP
+      # 8. Vérifier EXE
+      # ==========================================
+
+      - name: Verify executable
+        shell: powershell
+        run: |
+
+          $exePath = "dist\AttestationGenerator\AttestationGenerator.exe"
+
+          Write-Host "Checking:"
+          Write-Host $exePath
+
+          if (!(Test-Path $exePath)) {
+              Write-Error "ERROR: AttestationGenerator.exe not found!"
+              exit 1
+          }
+
+          Write-Host "EXE found successfully."
+
+
+      # ==========================================
+      # 9. Vérifier templates dans DIST
+      # ==========================================
+
+      - name: Verify packaged templates
+        shell: powershell
+        run: |
+
+          $templatesPath = "dist\AttestationGenerator\templates"
+
+          Write-Host "Checking:"
+          Write-Host $templatesPath
+
+          if (!(Test-Path $templatesPath)) {
+              Write-Error "ERROR: templates directory not found in packaged application!"
+              exit 1
+          }
+
+          Write-Host ""
+          Write-Host "Packaged templates:"
+          Get-ChildItem $templatesPath -Force
+
+          Write-Host ""
+          Write-Host "Templates verification successful."
+
+
+      # ==========================================
+      # 10. Créer ZIP
       # ==========================================
 
       - name: Create ZIP
         shell: powershell
         run: |
+
           Compress-Archive `
             -Path "dist\AttestationGenerator\*" `
             -DestinationPath "AttestationGenerator-Windows.zip" `
             -Force
 
+          Write-Host "ZIP created successfully."
+
 
       # ==========================================
-      # 8. Publier le résultat
+      # 11. Vérifier ZIP
+      # ==========================================
+
+      - name: Verify ZIP
+        shell: powershell
+        run: |
+
+          if (!(Test-Path "AttestationGenerator-Windows.zip")) {
+              Write-Error "ERROR: ZIP file was not created!"
+              exit 1
+          }
+
+          $size = (Get-Item "AttestationGenerator-Windows.zip").Length
+
+          Write-Host "ZIP size: $size bytes"
+
+          if ($size -le 0) {
+              Write-Error "ERROR: ZIP is empty!"
+              exit 1
+          }
+
+          Write-Host "ZIP verification successful."
+
+
+      # ==========================================
+      # 12. Publier le résultat
       # ==========================================
 
       - name: Upload Windows application

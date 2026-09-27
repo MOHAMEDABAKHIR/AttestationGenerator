@@ -1,8 +1,6 @@
 from PyInstaller.utils.hooks import collect_submodules
 
-
 hiddenimports = collect_submodules("docxtpl")
-
 
 a = Analysis(
     ["UI/main.py"],
@@ -19,9 +17,7 @@ a = Analysis(
     noarchive=False,
 )
 
-
 pyz = PYZ(a.pure)
-
 
 exe = EXE(
     pyz,
@@ -35,7 +31,6 @@ exe = EXE(
     upx=True,
     console=False,
 )
-
 
 coll = COLLECT(
     exe,
