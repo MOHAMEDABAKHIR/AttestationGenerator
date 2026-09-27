@@ -230,4 +230,3 @@ jobs:
         with:
           name: AttestationGenerator-Windows
           path: AttestationGenerator-Windows.zip
-          

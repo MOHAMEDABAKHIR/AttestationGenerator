@@ -1,232 +1,66 @@
-name: Build Windows Application
-
-on:
-  workflow_dispatch:
-
-jobs:
-  build-windows:
-
-    runs-on: windows-latest
-
-    steps:
-
-      # ==========================================
-      # 1. Récupérer le projet
-      # ==========================================
-
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-
-      # ==========================================
-      # 2. Installer Python
-      # ==========================================
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-
-      # ==========================================
-      # 3. Vérifier la structure du projet
-      # ==========================================
-
-      - name: Verify project structure
-        shell: powershell
-        run: |
-
-          Write-Host "=========================================="
-          Write-Host "PROJECT ROOT"
-          Write-Host "=========================================="
-
-          Get-ChildItem -Force
-
-
-          Write-Host ""
-          Write-Host "=========================================="
-          Write-Host "TEMPLATES"
-          Write-Host "=========================================="
-
-          if (!(Test-Path "templates")) {
-              Write-Error "ERROR: templates directory does not exist!"
-              exit 1
-          }
-
-          Get-ChildItem "templates" -Force
-
-          Write-Host ""
-          Write-Host "Templates directory found successfully."
-
-
-      # ==========================================
-      # 3bis. Vérifier que les templates sont trackés par git
-      # ==========================================
-
-      - name: Check tracked template files
-        shell: powershell
-        run: |
-
-          Write-Host "=========================================="
-          Write-Host "FICHIERS TEMPLATES TRACKES PAR GIT"
-          Write-Host "=========================================="
-
-          $tracked = git ls-files "templates/*.docx" "templates/*.doc"
-
-          if ([string]::IsNullOrWhiteSpace($tracked)) {
-              Write-Error "ERROR: aucun fichier .docx/.doc n'est tracké par git dans templates/ !"
-              exit 1
-          }
-
-          Write-Host $tracked
-          Write-Host ""
-          Write-Host "Templates trackés par git : OK"
-
-
-      # ==========================================
-      # 4. Installer les dépendances
-      # ==========================================
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pyinstaller
-
-
-      # ==========================================
-      # 5. Vérifier environnement
-      # ==========================================
-
-      - name: Verify environment
-        run: |
-          python --version
-          pyinstaller --version
-
-
-      # ==========================================
-      # 6. Construire l'application
-      # ==========================================
-
-      - name: Build Windows application
-        run: |
-          pyinstaller --clean --noconfirm build.spec
-
-
-      # ==========================================
-      # 7. Afficher le contenu de DIST
-      # ==========================================
-
-      - name: Inspect build output
-        shell: powershell
-        run: |
-
-          Write-Host "=========================================="
-          Write-Host "BUILD OUTPUT"
-          Write-Host "=========================================="
-
-          if (!(Test-Path "dist")) {
-              Write-Error "ERROR: dist directory does not exist!"
-              exit 1
-          }
-
-          Get-ChildItem -Recurse "dist" -Force
-
-
-      # ==========================================
-      # 8. Vérifier EXE
-      # ==========================================
-
-      - name: Verify executable
-        shell: powershell
-        run: |
-
-          $exePath = "dist\AttestationGenerator\AttestationGenerator.exe"
-
-          Write-Host "Checking:"
-          Write-Host $exePath
-
-          if (!(Test-Path $exePath)) {
-              Write-Error "ERROR: AttestationGenerator.exe not found!"
-              exit 1
-          }
-
-          Write-Host "EXE found successfully."
-
-
-      # ==========================================
-      # 9. Vérifier templates dans DIST
-      # ==========================================
-
-      - name: Verify packaged templates
-        shell: powershell
-        run: |
-
-          $templatesPath = "dist\AttestationGenerator\templates"
-
-          Write-Host "Checking:"
-          Write-Host $templatesPath
-
-          if (!(Test-Path $templatesPath)) {
-              Write-Error "ERROR: templates directory not found in packaged application!"
-              exit 1
-          }
-
-          Write-Host ""
-          Write-Host "Packaged templates:"
-          Get-ChildItem $templatesPath -Force
-
-          Write-Host ""
-          Write-Host "Templates verification successful."
-
-
-      # ==========================================
-      # 10. Créer ZIP
-      # ==========================================
-
-      - name: Create ZIP
-        shell: powershell
-        run: |
-
-          Compress-Archive `
-            -Path "dist\AttestationGenerator\*" `
-            -DestinationPath "AttestationGenerator-Windows.zip" `
-            -Force
-
-          Write-Host "ZIP created successfully."
-
-
-      # ==========================================
-      # 11. Vérifier ZIP
-      # ==========================================
-
-      - name: Verify ZIP
-        shell: powershell
-        run: |
-
-          if (!(Test-Path "AttestationGenerator-Windows.zip")) {
-              Write-Error "ERROR: ZIP file was not created!"
-              exit 1
-          }
-
-          $size = (Get-Item "AttestationGenerator-Windows.zip").Length
-
-          Write-Host "ZIP size: $size bytes"
-
-          if ($size -le 0) {
-              Write-Error "ERROR: ZIP is empty!"
-              exit 1
-          }
-
-          Write-Host "ZIP verification successful."
-
-
-      # ==========================================
-      # 12. Publier le résultat
-      # ==========================================
-
-      - name: Upload Windows application
-        uses: actions/upload-artifact@v4
-        with:
-          name: AttestationGenerator-Windows
-          path: AttestationGenerator-Windows.zip
+import glob
+from PyInstaller.utils.hooks import collect_submodules
+
+hiddenimports = collect_submodules("docxtpl")
+
+# ==========================================
+# Debug + collecte explicite des templates
+# (au lieu de compter sur le wildcard implicite
+# de PyInstaller, qui échoue silencieusement)
+# ==========================================
+
+print("[DEBUG] CWD au moment du build:", __import__("os").getcwd())
+
+template_files = sorted(
+    glob.glob("templates/*.docx") + glob.glob("templates/*.doc")
+)
+
+print(f"[DEBUG] Fichiers templates trouvés ({len(template_files)}):")
+for f in template_files:
+    print(f"[DEBUG]   - {f}")
+
+if not template_files:
+    raise FileNotFoundError(
+        "Aucun fichier .docx/.doc trouvé dans templates/ au moment du build. "
+        "Verifie que build.spec est bien lance depuis la racine du repo, "
+        "et que les fichiers sont bien presents a cet endroit."
+    )
+
+datas = [(f, "templates") for f in template_files]
+
+a = Analysis(
+    ["UI/main.py"],
+    pathex=["."],
+    binaries=[],
+    datas=datas,
+    hiddenimports=hiddenimports,
+    hookspath=[],
+    hooksconfig={},
+    runtime_hooks=[],
+    excludes=[],
+    noarchive=False,
+)
+
+pyz = PYZ(a.pure)
+
+exe = EXE(
+    pyz,
+    a.scripts,
+    [],
+    exclude_binaries=True,
+    name="AttestationGenerator",
+    debug=False,
+    bootloader_ignore_signals=False,
+    strip=False,
+    upx=True,
+    console=False,
+)
+
+coll = COLLECT(
+    exe,
+    a.binaries,
+    a.datas,
+    strip=False,
+    upx=True,
+    name="AttestationGenerator",
+)
