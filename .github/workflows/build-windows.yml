@@ -60,6 +60,30 @@ jobs:
 
 
       # ==========================================
+      # 3bis. Vérifier que les templates sont trackés par git
+      # ==========================================
+
+      - name: Check tracked template files
+        shell: powershell
+        run: |
+
+          Write-Host "=========================================="
+          Write-Host "FICHIERS TEMPLATES TRACKES PAR GIT"
+          Write-Host "=========================================="
+
+          $tracked = git ls-files "templates/*.docx" "templates/*.doc"
+
+          if ([string]::IsNullOrWhiteSpace($tracked)) {
+              Write-Error "ERROR: aucun fichier .docx/.doc n'est tracké par git dans templates/ !"
+              exit 1
+          }
+
+          Write-Host $tracked
+          Write-Host ""
+          Write-Host "Templates trackés par git : OK"
+
+
+      # ==========================================
       # 4. Installer les dépendances
       # ==========================================
 
@@ -206,3 +230,4 @@ jobs:
         with:
           name: AttestationGenerator-Windows
           path: AttestationGenerator-Windows.zip
+          
