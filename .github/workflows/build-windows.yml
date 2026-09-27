@@ -162,7 +162,9 @@ jobs:
         shell: powershell
         run: |
 
-          $templatesPath = "dist\AttestationGenerator\templates"
+          # Depuis PyInstaller 6.x en mode --onedir, les données (datas)
+          # sont packagées dans _internal/, pas à côté de l'exe directement.
+          $templatesPath = "dist\AttestationGenerator\_internal\templates"
 
           Write-Host "Checking:"
           Write-Host $templatesPath
