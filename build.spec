@@ -7,7 +7,8 @@ a = Analysis(
     pathex=["."],
     binaries=[],
     datas=[
-        ("templates", "templates"),
+        ("templates/*.docx", "templates"),
+        ("templates/*.doc", "templates"),
     ],
     hiddenimports=hiddenimports,
     hookspath=[],
