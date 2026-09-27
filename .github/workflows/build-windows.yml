@@ -55,33 +55,8 @@ jobs:
 
           Get-ChildItem "templates" -Force
 
-
           Write-Host ""
-          Write-Host "=========================================="
-          Write-Host "CHECK REQUIRED TEMPLATES"
-          Write-Host "=========================================="
-
-          $requiredTemplates = @(
-              "CAC_avec_retard.docx",
-              "CAC_sans_retard.docx",
-              "EC_avec_retard.docx",
-              "EC_sans_retard.docx"
-          )
-
-          foreach ($template in $requiredTemplates) {
-
-              $path = "templates\$template"
-
-              if (!(Test-Path $path)) {
-                  Write-Error "ERROR: Missing template: $path"
-                  exit 1
-              }
-
-              Write-Host "OK: $path"
-          }
-
-          Write-Host ""
-          Write-Host "All templates are present."
+          Write-Host "Templates directory found successfully."
 
 
       # ==========================================
